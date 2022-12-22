@@ -23,20 +23,20 @@ fn main() {
     // Prepare the 🦀 (producers)
     let producer_handle = thread::spawn(move || {
         for _i in 0..CRABS_TO_COOK {
-            let (prepared_lock, enough_for_pot) = &*prepare;
+            let (prepared_crabs, enough_for_pot) = &*prepare;
 
-            let mut prepared_crabs = prepared_lock.lock().unwrap();
-            prepared_crabs.push(String::from("🦀"));
+            let mut prepared_crabs_lock = prepared_crabs.lock().unwrap();
+            prepared_crabs_lock.push(String::from("🦀"));
 
-            println!("Prepared a 🦀! Number prepared: {}", prepared_crabs.len());
+            println!("Prepared a 🦀! Number prepared: {}", prepared_crabs_lock.len());
 
             // If there are enough prepared, then it's time to notify the cookers
-            if prepared_crabs.len() >= POT_SIZE {
+            if prepared_crabs_lock.len() >= POT_SIZE {
                 enough_for_pot.notify_one();
             }
-            drop(prepared_lock);
+            drop(prepared_crabs_lock);
 
-            sleep(Duration::from_millis(500));
+            sleep(Duration::from_millis(300));
         }
     });
 
@@ -44,23 +44,23 @@ fn main() {
     let consumer_handle = thread::spawn(move || {
         let mut cooked_crabs = 0;
         while cooked_crabs < CRABS_TO_COOK {
-            let (prepared_lock, enough_for_pot) = &*cook;
+            let (prepared_crabs, enough_for_pot) = &*cook;
 
             // As long as there are fewer than 3 crabs to prepare, we wait.
-            let mut prepared_crabs = prepared_lock.lock().unwrap();
-            if prepared_crabs.len() < POT_SIZE {
-                prepared_crabs = enough_for_pot.wait(prepared_crabs).unwrap();
+            let mut prepared_crabs_lock = prepared_crabs.lock().unwrap();
+            if prepared_crabs_lock.len() < POT_SIZE {
+                prepared_crabs_lock = enough_for_pot.wait(prepared_crabs_lock).unwrap();
             }
 
-            if prepared_crabs.len() < POT_SIZE {
+            if prepared_crabs_lock.len() < POT_SIZE {
                 println!("Spurrious wakeup!");
             } else {
                 // Put them into the pot!
-                prepared_crabs.pop();
-                prepared_crabs.pop();
-                prepared_crabs.pop();
+                prepared_crabs_lock.pop();
+                prepared_crabs_lock.pop();
+                prepared_crabs_lock.pop();
                 cooked_crabs += 3;
-                println!("Added 3 🦀 to the pot: {:?}", prepared_crabs);
+                println!("Added 3 🦀 to the pot: {:?}", prepared_crabs_lock);
             }
         }
     });

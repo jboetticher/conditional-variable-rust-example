@@ -18,7 +18,6 @@ fn main() {
         enough_for_pot,
     ));
     let cook = Arc::clone(&prepare);
-    let main = Arc::clone(&prepare);
 
     // Prepare the 🦀 (producers)
     let producer_handle = thread::spawn(move || {
@@ -28,14 +27,15 @@ fn main() {
             let mut prepared_crabs_lock = prepared_crabs.lock().unwrap();
             prepared_crabs_lock.push(String::from("🦀"));
 
-            println!("Prepared a 🦀! Number prepared: {}", prepared_crabs_lock.len());
+            println!("Prepared a 🦀! Prepared left: {}", prepared_crabs_lock.len());
 
             // If there are enough prepared, then it's time to notify the cookers
             if prepared_crabs_lock.len() >= POT_SIZE {
                 enough_for_pot.notify_one();
             }
-            drop(prepared_crabs_lock);
 
+            // Takes some time to prepare another...
+            drop(prepared_crabs_lock);
             sleep(Duration::from_millis(300));
         }
     });
@@ -60,7 +60,12 @@ fn main() {
                 prepared_crabs_lock.pop();
                 prepared_crabs_lock.pop();
                 cooked_crabs += 3;
+
                 println!("Added 3 🦀 to the pot: {:?}", prepared_crabs_lock);
+
+                // Takes some time to boil them...
+                drop(prepared_crabs_lock);
+                sleep(Duration::from_millis(1500));
             }
         }
     });
@@ -75,6 +80,4 @@ fn main() {
         Ok(_) => (),
         Err(err) => println!("{:?}", err),
     }
-
-    println!("After Join: {:?}", main.0);
 }
